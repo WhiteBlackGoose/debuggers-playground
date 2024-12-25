@@ -1,3 +1,4 @@
+#include "sys/user.h"
 #include "time.h"
 #include "stdio.h"
 #include "stdlib.h"
@@ -30,7 +31,12 @@ void run_debugger(pid_t child_pid)
 
     while (WIFSTOPPED(wait_status)) {
         icounter++;
-        /* Make the child execute another instruction */
+        struct user_regs_struct regs;
+
+        ptrace(PTRACE_GETREGS, child_pid, 0, &regs);
+        printf("RAX: %llu, RIP: %llu\n", regs.rax, regs.rip);
+
+
         if (ptrace(PTRACE_SINGLESTEP, child_pid, 0, 0) < 0) {
             perror("ptrace");
             return;
