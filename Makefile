@@ -1,9 +1,11 @@
 run-all: run-p1 run-p2
 
 run-p1: build-dbg-p1 build-target-p1
+	printf "\n---- Running part 1 ----\n"
 	./dbg1 target1
 
 run-p2: build-dbg-p2 build-target-p2
+	printf "\n---- Running part 2 ----\n"
 	./dbg2 target2
 
 run-target-p1: build-target-p1

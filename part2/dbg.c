@@ -23,30 +23,36 @@ void run_target(const char* programname)
 void run_debugger(pid_t child_pid)
 {
     int wait_status;
-    unsigned icounter = 0;
-    printf("debugger started\n");
-
-    /* Wait for child to stop on its first instruction */
     wait(&wait_status);
 
-    while (WIFSTOPPED(wait_status)) {
-        icounter++;
+    unsigned long long target_addr = 0x40101b;
+    unsigned long long data_og = ptrace(PTRACE_PEEKTEXT, child_pid, (void*)target_addr, 0);
+    printf("data at 0x%llx: 0x%llx\n", target_addr, data_og);
+
+    unsigned long long int3 = 0x03CD; // LE
+    unsigned long long data_trap = (data_og & 0xFFFFFFFFFFFF0000) | int3;
+    ptrace(PTRACE_POKETEXT, child_pid, (void*)target_addr, (void*)data_trap);
+    unsigned long long data_after = ptrace(PTRACE_PEEKTEXT, child_pid, (void*)target_addr, 0);
+    printf("data at 0x%llx: 0x%llx\n", target_addr, data_after);
+
+    ptrace(PTRACE_CONT, child_pid, 0, 0);
+    wait(&wait_status);
+
+    if (WIFSTOPPED(wait_status)) {
+        printf("\n\033[31;1mbreakpoint hit\033[0m\n");
         struct user_regs_struct regs;
-
         ptrace(PTRACE_GETREGS, child_pid, 0, &regs);
-        printf("RAX: %llu, RIP: %llu\n", regs.rax, regs.rip);
+        printf("\033[31;1mwe're at RIP = 0x%llx\033[0m\n", regs.rip);
 
+        ptrace(PTRACE_POKETEXT, child_pid, (void*)target_addr, (void*)data_og);
+        regs.rip -= 2;
+        ptrace(PTRACE_SETREGS, child_pid, 0, &regs);
+        ptrace(PTRACE_CONT, child_pid, 0, 0);
 
-        if (ptrace(PTRACE_SINGLESTEP, child_pid, 0, 0) < 0) {
-            perror("ptrace");
-            return;
-        }
-
-        /* Wait for child to stop on its next instruction */
-        wait(&wait_status);
+    } else {
+        perror("wait");
+        return;
     }
-
-    printf("the child executed %u instructions\n", icounter);
 }
 
 int main(int argc, char** argv)
