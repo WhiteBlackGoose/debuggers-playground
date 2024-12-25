@@ -8,8 +8,6 @@
 
 void run_target(const char* programname)
 {
-    printf("target started. will run '%s'\n", programname);
-
     /* Allow tracing of this process */
     if (ptrace(PTRACE_TRACEME, 0, 0, 0) < 0) {
         perror("ptrace");
@@ -27,13 +25,13 @@ void run_debugger(pid_t child_pid)
 
     unsigned long long target_addr = 0x40101b;
     unsigned long long data_og = ptrace(PTRACE_PEEKTEXT, child_pid, (void*)target_addr, 0);
-    printf("data at 0x%llx: 0x%llx\n", target_addr, data_og);
+    printf("\033[32mdata at 0x%llx: 0x%llx\033[0m\n", target_addr, data_og);
 
     unsigned long long int3 = 0x03CD; // LE
     unsigned long long data_trap = (data_og & 0xFFFFFFFFFFFF0000) | int3;
     ptrace(PTRACE_POKETEXT, child_pid, (void*)target_addr, (void*)data_trap);
     unsigned long long data_after = ptrace(PTRACE_PEEKTEXT, child_pid, (void*)target_addr, 0);
-    printf("data at 0x%llx: 0x%llx\n", target_addr, data_after);
+    printf("\033[32mdata at 0x%llx: 0x%llx\033[0m\n", target_addr, data_after);
 
     ptrace(PTRACE_CONT, child_pid, 0, 0);
     wait(&wait_status);
